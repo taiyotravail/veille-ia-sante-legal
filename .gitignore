@@ -1,0 +1,18 @@
+# Secrets — ne jamais committer
+.env
+
+# Environnements virtuels
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Livrables générés
+rapport_veille_2026.md
+
+# OS
+.DS_Store
