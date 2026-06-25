@@ -1,0 +1,53 @@
+# Claude Code Rules - Économise le quota en ignorant les fichiers non-essentiels
+# Utilisé par Claude Code pour filtrer les fichiers lors de l'analyse
+
+version: 1
+
+ignore:
+  # Caches Python compilés
+  - __pycache__/
+  - "*.pyc"
+  - "*.pyo"
+  - "*.pyd"
+
+  # Virtual environment (1GB+ de dépendances)
+  - .venv/
+  - venv/
+  - env/
+
+  # Fichiers de cache/metadata Python
+  - .pytest_cache/
+  - .mypy_cache/
+  - .coverage
+  - .tox/
+
+  # Fichiers générés/outputs (résultats d'exécution)
+  - rapport_veille_2026.md
+  - "*.log"
+
+  # Configuration locale Claude Code
+  - .claude/
+
+  # Dépôts externes/submodules
+  - node_modules/
+  - dist/
+  - build/
+  - "*.egg-info/"
+
+  # OS/IDE
+  - .DS_Store
+  - .vscode/
+  - .idea/
+  - "*.swp"
+  - "*.swo"
+
+# Fichiers qui RESTENT importants pour l'analyse
+include:
+  - src/**/*.py
+  - tests/**/*.py
+  - main.py
+  - requirements.txt
+  - "*.md"
+  - ".env.example"
+  - claude.md
+  - .gitignore

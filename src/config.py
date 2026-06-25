@@ -16,58 +16,38 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def _require(key: str) -> str:
-    """Récupère une variable d'environnement obligatoire.
-
-    Args:
-        key: Nom de la variable d'environnement.
-
-    Returns:
-        La valeur de la variable.
-
-    Raises:
-        RuntimeError: Si la variable est absente ou vide.
-    """
-    value = os.getenv(key)
-    if not value:
-        raise RuntimeError(
-            f"Variable d'environnement manquante : {key}. "
-            "Copiez .env.example vers .env et renseignez vos clés."
-        )
-    return value
-
-
 @dataclass(frozen=True)
 class Settings:
     """Paramètres immuables de l'application.
 
-    Le modèle par défaut est `claude-sonnet-4-6` : équivalent Sonnet actuel
-    (fenêtre de contexte 1M tokens), retenu pour le rapport coût/performance
-    annoncé dans la feuille de route. Surchargagle via ANTHROPIC_MODEL.
+    Pipeline 100% local et open source : recherche via DuckDuckGo (ddgs) et
+    scraping via trafilatura, sans aucune clé API. Le LLM tourne en local via
+    Ollama. Zéro coût, confidentialité garantie.
     """
 
-    anthropic_api_key: str = field(default_factory=lambda: _require("ANTHROPIC_API_KEY"))
-    firecrawl_api_key: str = field(default_factory=lambda: _require("FIRECRAWL_API_KEY"))
-    tavily_api_key: str = field(default_factory=lambda: _require("TAVILY_API_KEY"))
+    # Modèle Ollama à exécuter localement.
+    ollama_model: str = field(
+        default_factory=lambda: os.getenv("OLLAMA_MODEL", "phi4-mini")
+    )
 
-    # Préfixe `anthropic/` requis par l'intégration LiteLLM de CrewAI.
-    anthropic_model: str = field(
-        default_factory=lambda: os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+    # Base URL d'Ollama (par défaut localhost:11434).
+    ollama_base_url: str = field(
+        default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     )
 
     # Langue principale analysée par Presidio (anonymisation locale).
     presidio_lang: str = field(default_factory=lambda: os.getenv("PRESIDIO_LANG", "fr"))
 
     # Troncature préventive : nombre max de caractères injectés par page scrapée,
-    # pour maîtriser le budget de tokens lors de l'ingestion de sites entiers.
+    # critère encore plus important avec phi4-mini (contexte limité).
     max_chars_per_page: int = field(
-        default_factory=lambda: int(os.getenv("MAX_CHARS_PER_PAGE", "40000"))
+        default_factory=lambda: int(os.getenv("MAX_CHARS_PER_PAGE", "20000"))
     )
 
     @property
     def crewai_model(self) -> str:
-        """Identifiant du modèle au format attendu par CrewAI/LiteLLM."""
-        return f"anthropic/{self.anthropic_model}"
+        """Identifiant du modèle au format LiteLLM pour Ollama local."""
+        return f"ollama/{self.ollama_model}"
 
 
 # Instance unique partagée par l'application.

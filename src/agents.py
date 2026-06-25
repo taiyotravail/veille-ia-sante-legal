@@ -1,28 +1,31 @@
-"""Définition des deux agents Claude (CrewAI).
+"""Définition des deux agents phi4-mini (CrewAI via Ollama).
 
 - Agent 1 : Le Chercheur de niche (Niche Researcher)
 - Agent 2 : L'Analyste / Rédacteur (Analyst & Writer)
 
-Les deux agents partagent le même LLM (Anthropic via LiteLLM). Le Chercheur
-dispose des outils de recherche et de scraping ; l'Analyste consolide sans
-nouvel accès réseau pour limiter les risques de divergence factuelle.
+Les deux agents partagent le même LLM local (Ollama + phi4-mini).
+Zéro transmission cloud, confidentialité garantie, coûts nuls.
 """
 
 from __future__ import annotations
 
-from crewai import LLM, Agent
+from crewai import Agent, LLM
 
 from .config import settings
-from .tools import FirecrawlScrapeTool, TavilySearchTool
+from .tools import DuckDuckGoSearchTool, WebScrapeTool
 
 
 def build_llm() -> LLM:
-    """Construit le client LLM CrewAI pointant vers Anthropic.
+    """Construit le client LLM Ollama local (phi4-mini) via CrewAI/LiteLLM.
 
     Returns:
-        Une instance `LLM` configurée avec le modèle et la clé Anthropic.
+        Une instance `LLM` configurée pour Ollama local.
     """
-    return LLM(model=settings.crewai_model, api_key=settings.anthropic_api_key)
+    return LLM(
+        model=settings.crewai_model,
+        base_url=settings.ollama_base_url,
+        temperature=0.5,
+    )
 
 
 def build_researcher(llm: LLM) -> Agent:
@@ -49,7 +52,7 @@ def build_researcher(llm: LLM) -> Agent:
             "information (date, lieu, lien) est absente, tu écris littéralement "
             "« Information non fournie » au lieu de l'extrapoler."
         ),
-        tools=[TavilySearchTool(), FirecrawlScrapeTool()],
+        tools=[DuckDuckGoSearchTool(), WebScrapeTool()],
         llm=llm,
         allow_delegation=False,
         verbose=True,

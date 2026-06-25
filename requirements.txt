@@ -2,14 +2,14 @@
 crewai>=0.80.0
 crewai-tools>=0.14.0
 
-# --- Fournisseur LLM (Anthropic via l'intégration LiteLLM de CrewAI) ---
-anthropic>=0.40.0
+# --- Fournisseur LLM (Ollama local via LiteLLM) ---
+ollama>=0.1.0
 
-# --- Scraping ---
-firecrawl-py>=1.6.0
+# --- Scraping (open source, pur Python, sans navigateur) ---
+trafilatura>=2.1.0
 
-# --- Recherche web ---
-tavily-python>=0.5.0
+# --- Recherche web (open source, sans clé API) ---
+ddgs>=9.0.0
 
 # --- Anonymisation locale RGPD (Mac M1) ---
 presidio-analyzer>=2.2.355
