@@ -25,9 +25,10 @@ class Settings:
     Ollama. Zéro coût, confidentialité garantie.
     """
 
-    # Modèle Ollama à exécuter localement.
+    # Modèle Ollama à exécuter localement. qwen2.5:3b est retenu car il supporte
+    # nativement le tool calling requis par CrewAI (phi4-mini/openchat échouent).
     ollama_model: str = field(
-        default_factory=lambda: os.getenv("OLLAMA_MODEL", "phi4-mini")
+        default_factory=lambda: os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
     )
 
     # Base URL d'Ollama (par défaut localhost:11434).
@@ -39,7 +40,7 @@ class Settings:
     presidio_lang: str = field(default_factory=lambda: os.getenv("PRESIDIO_LANG", "fr"))
 
     # Troncature préventive : nombre max de caractères injectés par page scrapée,
-    # critère encore plus important avec phi4-mini (contexte limité).
+    # critère important pour ne pas surcharger le contexte du modèle local.
     max_chars_per_page: int = field(
         default_factory=lambda: int(os.getenv("MAX_CHARS_PER_PAGE", "20000"))
     )

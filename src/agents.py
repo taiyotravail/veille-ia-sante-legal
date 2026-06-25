@@ -1,9 +1,9 @@
-"""Définition des deux agents phi4-mini (CrewAI via Ollama).
+"""Définition des deux agents CrewAI (via Ollama local).
 
 - Agent 1 : Le Chercheur de niche (Niche Researcher)
 - Agent 2 : L'Analyste / Rédacteur (Analyst & Writer)
 
-Les deux agents partagent le même LLM local (Ollama + phi4-mini).
+Les deux agents partagent le même LLM local (Ollama + qwen2.5:3b).
 Zéro transmission cloud, confidentialité garantie, coûts nuls.
 """
 
@@ -16,7 +16,7 @@ from .tools import DuckDuckGoSearchTool, WebScrapeTool
 
 
 def build_llm() -> LLM:
-    """Construit le client LLM Ollama local (phi4-mini) via CrewAI/LiteLLM.
+    """Construit le client LLM Ollama local (qwen2.5:3b) via CrewAI/LiteLLM.
 
     Returns:
         Une instance `LLM` configurée pour Ollama local.
