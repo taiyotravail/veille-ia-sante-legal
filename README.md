@@ -1,71 +1,81 @@
-# Veille Événementielle IA Santé & Légal 2026 — CrewAI × Ollama (local)
+# Veille Événementielle IA Santé & Légal 2026 — Pipeline déterministe (local)
 
-Architecture multi-agents conforme à la feuille de route ([`claude.md`](claude.md)) :
-pipeline de données **100% local et open source**, sans aucune clé API ni service
-cloud propriétaire. Deux agents CrewAI (Chercheur / Analyste) propulsés par un LLM
-local via **Ollama**, anonymisation RGPD locale, et contrôle de fiabilité
-anti-hallucination.
+Pipeline de veille **100% local, open source et déterministe**, sans aucune clé API
+ni service cloud. Il découvre des salons/conférences IA (Santé Digitale & LegalTech)
+via DuckDuckGo, anonymise localement (RGPD), puis extrait un tableau de reporting
+par règles Python explicites — **sans LLM**.
 
-> **Zéro coût d'API · zéro donnée quittant le Mac · confidentialité par construction.**
+> **Zéro coût d'API · zéro donnée quittant le Mac · résultats reproductibles.**
+
+## « Déterministe » : pourquoi pas d'agents IA ?
+
+Le projet utilisait au départ deux **agents CrewAI** propulsés par un LLM local
+(Ollama + `qwen2.5:3b`). Sur un Mac M1 8 Go, ce petit modèle s'est révélé trop peu
+fiable : dates perdues, salons majeurs ignorés (ex : SantExpo), bruit retenu, et
+résultats différents à chaque exécution.
+
+L'extraction a donc été basculée en **pur Python déterministe** :
+
+| | Agents LLM (abandonné) | Déterministe (actuel) |
+| :--- | :--- | :--- |
+| Cherche sur Internet | ✅ Oui | ✅ Oui (DuckDuckGo) |
+| Choix des requêtes | L'IA improvise | Liste fixe curée (`SEED_QUERIES`) |
+| Extraction date/secteur | L'IA « comprend » le texte | Règles regex + mots-clés |
+| Reproductible | ❌ Non | ✅ Oui (mêmes entrées → mêmes sorties) |
+| Peut halluciner | ⚠️ Oui | ❌ Non (dates/URL verbatim) |
+
+On perd en « intelligence » contextuelle, on gagne en **fiabilité** — ce qui prime
+ici, le modèle local échouant à la tâche.
 
 ## Pipeline
 
 ```
-DuckDuckGo (ddgs)  ──►  trafilatura (Markdown)  ──►  Troncature  ──►  Presidio (local, RGPD)  ──►  Ollama (qwen2.5:3b)
-   recherche               scraping               budget tokens        anonymisation              LLM 100% local
-                                                                                                       │
-                                              Reporting Markdown  ◄──  Analyste  ◄──  Chercheur ───────┘
-                                                     │
-                                          Rétro-vérification locale (URL ⊂ corpus source)
+Requêtes-graines curées  ──►  DuckDuckGo (ddgs)  ──►  Presidio (local, RGPD)  ──►  Extraction déterministe
+   12 requêtes fixes            recherche web            anonymisation             regex dates + mots-clés secteur
+   (SantExpo, MedInTechs…)                                                                   │
+                                                                                  Reporting Markdown
+                                                                                             │
+                                                          Rétro-vérification locale (URL ⊂ corpus source)
 ```
 
-Chaque étape est exécutée localement sur le Mac M1. Le contenu scrapé est **tronqué
-puis anonymisé (Presidio) avant** d'être transmis au LLM — voir [`src/tools.py`](src/tools.py).
+Chaque étape s'exécute localement. Les snippets sont **anonymisés (Presidio) avant**
+tout traitement — voir [`src/tools.py`](src/tools.py).
 
-## Choix du modèle
+## Fonctionnement
 
-Le projet utilise **`qwen2.5:3b`** exécuté localement via Ollama : il supporte
-nativement le *tool calling* requis par CrewAI tout en restant léger (~1.9 Go),
-adapté à un Mac M1 8 Go.
-
-> ⚠️ Tout modèle ne supporte pas le tool calling. `openchat` et `phi4-mini`
-> échouent à appeler les outils CrewAI. Le modèle choisi **doit** exposer la
-> capacité `tools` côté Ollama.
-
-Le modèle est centralisé dans [`src/config.py`](src/config.py) et surchargeable via
-la variable d'environnement `OLLAMA_MODEL`.
+- **Découverte** ([`src/tools.py`](src/tools.py)) : 12 requêtes-graines curées couvrant
+  les secteurs cibles et les salons phares. Pour chaque requête, on privilégie le
+  résultat dont le *snippet* porte une date exploitable.
+- **Extraction** ([`src/extraction.py`](src/extraction.py)) :
+  - **Date** reprise *verbatim* par regex (ISO, jour+mois FR/EN, mois+année, intervalles) ;
+  - **Secteur** déduit par mots-clés (« IA Santé » / « IA Légal ») ; le bruit (sans
+    mot-clé sectoriel) est écarté ;
+  - **Poids stratégique (1-5)** par heuristique transparente (salon phare, date précise).
+- **Filtrage par dates** (optionnel) avec politique **« garder + flaguer »** : hors plage
+  → écarté ; date imprécise → conservée mais flaguée `⚠️ à vérifier` (arbitrage humain).
+- **Anti-hallucination** ([`src/verification.py`](src/verification.py)) : chaque URL du
+  livrable doit exister à l'identique dans le corpus source réellement collecté.
 
 ## Installation
-
-### 1. Ollama + modèle local
-
-```bash
-brew install ollama
-ollama pull qwen2.5:3b
-ollama serve            # à laisser tourner en arrière-plan
-```
-
-### 2. Environnement Python
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python -m spacy download fr_core_news_lg   # modèle français requis par Presidio
-cp .env.example .env                       # optionnel : surcharges (modèle, langue…)
 ```
 
-> Le fichier `.env` est **facultatif** : aucune clé API n'est nécessaire. Il sert
-> uniquement à surcharger les valeurs par défaut (`OLLAMA_MODEL`, `OLLAMA_BASE_URL`,
-> `PRESIDIO_LANG`, `MAX_CHARS_PER_PAGE`).
+> Aucune clé API, aucun LLM, aucun service à lancer. Le `.env` est facultatif
+> (seule surcharge utile : `PRESIDIO_LANG`, défaut `fr`).
 
 ## Exécution
 
 ```bash
-python main.py
+python main.py                                       # veille 2026 globale
+python main.py --debut 2026-04-01 --fin 2026-06-30   # entre deux dates (bornes incluses)
 ```
 
-Le livrable est écrit dans `rapport_veille_2026.md`, puis le contrôle de fiabilité
-signale toute URL absente du corpus source (potentielle hallucination → arbitrage humain).
+Le livrable est écrit dans `rapport_veille_2026.md`. Le contrôle de fiabilité signale
+toute URL absente du corpus source (potentielle hallucination → arbitrage humain).
 
 ## Tests
 
@@ -73,29 +83,27 @@ signale toute URL absente du corpus source (potentielle hallucination → arbitr
 pytest
 ```
 
-Les tests de logique pure (`test_verification.py`) tournent sans dépendance ;
+`test_verification.py` et `test_extraction.py` (logique pure) tournent sans dépendance ;
 `test_anonymizer.py` est ignoré automatiquement si Presidio n'est pas installé.
 
 ## Structure
 
 | Fichier | Rôle |
 | :--- | :--- |
-| [`src/config.py`](src/config.py) | Configuration centralisée (modèle Ollama, base URL, langue Presidio, chunking). |
+| [`src/config.py`](src/config.py) | Configuration centralisée (langue Presidio). |
 | [`src/anonymizer.py`](src/anonymizer.py) | Anonymisation locale stricte (Presidio + spaCy `fr_core_news_lg` / RGPD). |
-| [`src/tools.py`](src/tools.py) | Outils CrewAI : recherche DuckDuckGo (`web_search`) + scraping trafilatura (`web_scrape`), anonymisés à la source. |
-| [`src/agents.py`](src/agents.py) | Chercheur de niche + Analyste / Rédacteur (LLM Ollama partagé). |
-| [`src/tasks.py`](src/tasks.py) | Tâches de recherche et de reporting. |
-| [`src/crew.py`](src/crew.py) | Assemblage séquentiel de l'équipage. |
-| [`src/verification.py`](src/verification.py) | Rétro-vérification anti-hallucination (URL ⊂ corpus source). |
-| [`main.py`](main.py) | Point d'entrée + sanity check. |
+| [`src/tools.py`](src/tools.py) | Découverte par requêtes-graines curées (DuckDuckGo), snippets anonymisés. |
+| [`src/extraction.py`](src/extraction.py) | Extraction déterministe : date (regex) + secteur (mots-clés) + poids. |
+| [`src/verification.py`](src/verification.py) | Parsing de dates (FR/EN) + rétro-vérification anti-hallucination des URL. |
+| [`main.py`](main.py) | Point d'entrée + CLI `--debut/--fin` + sanity check. |
 
 ## Sécurité & RGPD
 
-- **Zéro cloud** : recherche, scraping, anonymisation et inférence LLM s'exécutent
-  intégralement sur le Mac M1. Aucune donnée ne sort de la machine.
+- **Zéro cloud** : recherche, anonymisation et extraction s'exécutent intégralement
+  sur le Mac M1. Aucune donnée ne sort de la machine.
 - **Anonymisation avant traitement** : les DCP (noms, emails, téléphones) sont
-  expurgées par Presidio **avant** que le contenu n'atteigne le LLM.
-- **Aucune clé API** : le pipeline est entièrement open source et gratuit.
-- **Anti-hallucination** : les agents sont contraints par prompt à reproduire
-  URL/dates verbatim ou à indiquer « Information non fournie » ; une passe regex
-  locale confronte ensuite les URL du livrable au corpus réellement scrapé.
+  expurgées par Presidio **avant** tout traitement.
+- **Aucune clé API** : pipeline entièrement open source et gratuit.
+- **Anti-hallucination par construction** : dates et URL reprises *verbatim* du corpus
+  source (jamais générées) ; une passe regex confronte les URL du livrable au corpus
+  réellement collecté.

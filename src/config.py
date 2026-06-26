@@ -21,34 +21,12 @@ class Settings:
     """Paramètres immuables de l'application.
 
     Pipeline 100% local et open source : recherche via DuckDuckGo (ddgs) et
-    scraping via trafilatura, sans aucune clé API. Le LLM tourne en local via
-    Ollama. Zéro coût, confidentialité garantie.
+    extraction déterministe en Python, sans aucune clé API ni service cloud.
+    Zéro coût, confidentialité garantie.
     """
-
-    # Modèle Ollama à exécuter localement. qwen2.5:3b est retenu car il supporte
-    # nativement le tool calling requis par CrewAI (phi4-mini/openchat échouent).
-    ollama_model: str = field(
-        default_factory=lambda: os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-    )
-
-    # Base URL d'Ollama (par défaut localhost:11434).
-    ollama_base_url: str = field(
-        default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    )
 
     # Langue principale analysée par Presidio (anonymisation locale).
     presidio_lang: str = field(default_factory=lambda: os.getenv("PRESIDIO_LANG", "fr"))
-
-    # Troncature préventive : nombre max de caractères injectés par page scrapée,
-    # critère important pour ne pas surcharger le contexte du modèle local.
-    max_chars_per_page: int = field(
-        default_factory=lambda: int(os.getenv("MAX_CHARS_PER_PAGE", "20000"))
-    )
-
-    @property
-    def crewai_model(self) -> str:
-        """Identifiant du modèle au format LiteLLM pour Ollama local."""
-        return f"ollama/{self.ollama_model}"
 
 
 # Instance unique partagée par l'application.

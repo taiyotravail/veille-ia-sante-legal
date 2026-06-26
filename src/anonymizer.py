@@ -1,8 +1,8 @@
 """Anonymisation locale stricte (RGPD) basée sur Microsoft Presidio.
 
 Ce module s'exécute **localement sur le Mac M1**. Aucune Donnée à Caractère
-Personnel (DCP) ne doit quitter la machine : tout texte issu de Firecrawl est
-expurgé ici (noms, emails, téléphones, etc.) avant transmission à l'API Anthropic.
+Personnel (DCP) ne doit quitter la machine : tout texte issu de la recherche web
+(titres, snippets) est expurgé ici (noms, emails, téléphones…) avant traitement.
 """
 
 from __future__ import annotations
